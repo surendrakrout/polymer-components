@@ -1,0 +1,133 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/web-socket/web-socket.html">
+
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="my-chat">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+
+        padding: 10px;
+      }
+      #log{
+        width: 90%;
+        min-height: 300px;
+        border:1px solid #ccc;
+        overflow: auto;
+        margin-bottom: 10px;
+        padding: 10px;
+        position: relative;
+        
+    }
+    #chatwindow{
+        margin: 0 auto;
+        padding: 10px;
+        border:3px solid #000;
+        width: 40%;
+    }
+
+    #typing{
+      position: absolute;
+      bottom: 0px;
+      font-style: italic;
+      font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif
+    }
+    </style>
+
+    <div class="card">
+      <web-socket id="ws"
+        url="ws://localhost:5001"
+        auto
+        on-open="_onOpen"
+        on-message="_onMessage">
+      </web-socket>
+
+    <div id="chatwindow">
+      <div id="log">
+        <div id="typing"></div>  
+      </div>
+      <input type="text" name="sendmsg" id="sendmsg" placeholder="message" on-keyup="_msgType">
+      <input type="button" name="button" id="sendbutton" value="send" on-click="_sendmsg">
+      </div>
+    </div>
+  </template>
+
+  <script>
+    class MyChat extends Polymer.Element {
+      static get is() { return 'my-chat'; }
+      static get properties(){
+        return{
+          ws:{
+            type:Object
+          },
+          user:{
+            type:Object
+          }
+        }
+      }
+      ready(){
+        super.ready();
+        this.ws=this.$.ws;
+        this.user = prompt('Enter your name? ');
+      }
+      _onOpen(event){
+        var nameData= {
+            type:"name",
+            data:this.user
+        }
+        this.shadowRoot.querySelector("#sendmsg").focus();
+        
+        this.ws.send(JSON.stringify(nameData));
+        console.log('socket connected successfully');
+      }
+
+      _onMessage(event){
+        debugger
+        var chatMessage = JSON.parse(event.detail);
+        if(chatMessage.type == 'typing')
+        {
+          this.shadowRoot.querySelector("#typing").innerHTML =  chatMessage.data;
+        }else{ 
+          this.shadowRoot.querySelector("#log").innerHTML+= "<strong>"+chatMessage.name +"</strong>: "+ chatMessage.data +"</br>";
+          this.shadowRoot.querySelector("#typing").innerHTML=''
+        }
+        
+    }
+
+    _sendmsg(){
+        var msg= this.shadowRoot.querySelector("#sendmsg").value ;
+        var msgData = {
+            type:"message",
+            data:msg
+        }
+        this.ws.send(JSON.stringify(msgData));
+        this.shadowRoot.querySelector("#log").innerHTML+= "you : "+ msg +"</br>"
+        this.shadowRoot.querySelector("#sendmsg").value='';
+        this.shadowRoot.querySelector("#sendmsg").focus();
+    }
+
+    _msgType(){
+      var msgtype= this.user + ' is typing....' ;
+        var dataTyping = {
+            type:"typing",
+            data:msgtype
+        }
+        this.ws.send(JSON.stringify(dataTyping));
+    }
+
+    }
+
+    window.customElements.define(MyChat.is, MyChat);
+  </script>
+</dom-module>
